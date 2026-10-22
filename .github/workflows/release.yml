@@ -1,0 +1,80 @@
+# Gera o LiminalPDF para Windows, Linux e macOS.
+# Dispara ao enviar uma tag (git tag v0.1.0 && git push origin v0.1.0)
+# ou manualmente pela aba Actions. Com tag, o resultado vira um rascunho
+# de Release; manualmente, os arquivos ficam em "Artifacts" na execução.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # instalador por usuário (sem admin)
+          - platform: windows-latest
+            args: ""
+            plain: false
+          # .exe portátil, um arquivo só
+          - platform: windows-latest
+            args: "--no-bundle"
+            plain: true
+          # .deb e AppImage
+          - platform: ubuntu-22.04
+            args: ""
+            plain: false
+          # .dmg universal (Intel + Apple Silicon)
+          - platform: macos-latest
+            args: "--target universal-apple-darwin"
+            plain: false
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependências do Linux
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          releaseName: "LiminalPDF ${{ github.ref_name }}"
+          releaseBody: "Veja o README para instruções. Windows: o instalador (setup.exe) não pede administrador; o .exe solto é portátil."
+          releaseDraft: true
+          args: ${{ matrix.args }}
+          uploadPlainBinary: ${{ matrix.plain }}
+
+      - uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
+        with:
+          name: liminalpdf-${{ matrix.platform }}${{ matrix.plain && '-portatil' || '' }}
+          path: |
+            src-tauri/target/release/liminalpdf.exe
+            src-tauri/target/**/release/bundle/
+          if-no-files-found: ignore

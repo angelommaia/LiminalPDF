@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LiminalPDF</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="bar">
+        <div class="brand" title="LiminalPDF">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 2.75h8.5l4.25 4.25v14.25H6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" opacity=".85" />
+            <path d="M14.5 2.75V7h4.25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" opacity=".85" />
+            <polyline points="9,17.5 9,13.5 13,13.5 13,10.5 21.5,10.5" fill="none" stroke="#b42318" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+          </svg>
+          Liminal
+        </div>
+
+        <div class="cluster">
+          <button type="button" id="btn-open" title="Abrir PDF">Abrir</button>
+          <button type="button" id="btn-load-marks" title="Carregar marcações (.json)" disabled>
+            Carregar
+          </button>
+          <button type="button" id="btn-save" title="Salvar marcações (.json)" disabled>
+            Salvar
+          </button>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="cluster">
+          <button type="button" id="btn-merge" title="Mesclar arquivos e escolher páginas num PDF novo (Ctrl+M)">
+            Montar PDF…
+          </button>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="cluster tools" role="toolbar" aria-label="Ferramentas">
+          <button type="button" class="tool on" data-tool="select" title="Selecionar e pan (V)">
+            Selecionar
+          </button>
+          <button type="button" class="tool" data-tool="line" title="Linha (L)">Linha</button>
+          <button type="button" class="tool" data-tool="polyline" title="Polilinha (P)">
+            Polilinha
+          </button>
+          <button type="button" class="tool" data-tool="rect" title="Área retangular (R)">
+            Área
+          </button>
+          <button type="button" class="tool" data-tool="text" title="Caixa de texto (T)">
+            Texto
+          </button>
+          <button type="button" class="tool" data-tool="highlight" title="Marca-texto: texto ou área livre (H)">
+            Marca-texto
+          </button>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="cluster">
+          <button type="button" id="btn-zoom-out" title="Reduzir">−</button>
+          <span id="zoom-label" class="quiet">—</span>
+          <button type="button" id="btn-zoom-in" title="Ampliar">+</button>
+          <button type="button" id="btn-fit" title="Ajustar à largura (Ctrl+0)" disabled>Ajustar</button>
+        </div>
+
+        <div class="spacer"></div>
+        <span id="hint" class="hint"></span>
+        <div class="themes" role="group" aria-label="Tema">
+          <button type="button" data-theme-choice="sepia" title="Tema sépia" aria-label="Tema sépia"></button>
+          <button type="button" data-theme-choice="light" title="Tema claro" aria-label="Tema claro"></button>
+          <button type="button" data-theme-choice="dark" title="Tema escuro" aria-label="Tema escuro"></button>
+        </div>
+      </header>
+
+      <div class="body">
+        <main id="stage" tabindex="0">
+          <div id="empty">
+            <p class="empty-title">Nenhum documento</p>
+            <p>
+              Abra um PDF. As marcações ficam num arquivo ao lado, sem alterar o original.
+            </p>
+          </div>
+          <div id="pages" hidden></div>
+        </main>
+
+        <aside id="side" hidden>
+          <section>
+            <h2>Marcação</h2>
+            <p id="sel-kind" class="quiet">Nada selecionado</p>
+
+            <div id="grp-rel">
+              <label>
+                Origem
+                <input id="f-from" type="text" autocomplete="off" />
+              </label>
+              <label>
+                Destino
+                <input id="f-to" type="text" autocomplete="off" />
+              </label>
+              <label>
+                Função
+                <input id="f-fn" type="text" autocomplete="off" />
+              </label>
+              <label>
+                Circuito
+                <input id="f-circuit" type="text" autocomplete="off" />
+              </label>
+              <label>
+                Status
+                <input id="f-status" type="text" list="status-list" autocomplete="off" />
+                <datalist id="status-list">
+                  <option value="ok"></option>
+                  <option value="pendente"></option>
+                  <option value="divergente"></option>
+                  <option value="proposto"></option>
+                  <option value="existente"></option>
+                </datalist>
+              </label>
+            </div>
+            <label id="grp-note">
+              Nota
+              <textarea id="f-note" rows="3"></textarea>
+            </label>
+          </section>
+
+          <section class="style">
+            <h2 id="style-title">Estilo</h2>
+            <div id="grp-text">
+              <div class="row">
+                <label class="grow">
+                  Texto
+                  <input id="t-color" type="color" />
+                </label>
+                <label class="grow">
+                  Tamanho (pt)
+                  <input id="t-size" type="number" min="4" max="72" step="0.5" />
+                </label>
+              </div>
+              <div class="row">
+                <label class="grow">
+                  Fundo
+                  <input id="t-fill" type="color" />
+                </label>
+                <label class="grow">
+                  Opacidade <output id="t-fill-opacity-val"></output>
+                  <input id="t-fill-opacity" type="range" min="0" max="100" step="1" />
+                </label>
+              </div>
+            </div>
+            <div class="row">
+              <label class="grow">
+                <span id="lbl-color">Cor</span>
+                <input id="s-color" type="color" />
+              </label>
+              <label class="grow">
+                <span id="lbl-width">Espessura (pt)</span>
+                <input id="s-width" type="number" min="0" max="20" step="0.1" />
+              </label>
+            </div>
+            <label>
+              <span id="lbl-opacity">Opacidade</span> <output id="s-opacity-val"></output>
+              <input id="s-opacity" type="range" min="5" max="100" step="1" />
+            </label>
+            <div class="swatches" id="swatches"></div>
+          </section>
+
+          <section>
+            <button type="button" id="btn-delete" class="danger" disabled>Excluir</button>
+          </section>
+        </aside>
+      </div>
+
+      <section id="sheet" hidden>
+        <div id="sheet-resizer" class="sheet-resizer" title="Arraste para redimensionar · duplo-clique volta ao tamanho padrão"></div>
+        <div class="sheet-tabs" role="tablist" aria-label="Lista de marcações">
+          <button type="button" role="tab" data-sheet-tab="line">Linha<span class="count"></span></button>
+          <button type="button" role="tab" data-sheet-tab="polyline">Polilinha<span class="count"></span></button>
+          <button type="button" role="tab" data-sheet-tab="rect">Área<span class="count"></span></button>
+          <button type="button" role="tab" data-sheet-tab="text">Texto<span class="count"></span></button>
+          <button type="button" role="tab" data-sheet-tab="highlight">Marca-texto<span class="count"></span></button>
+        </div>
+        <div class="sheet-scroll" role="tabpanel">
+          <table>
+            <thead id="sheet-head"></thead>
+            <tbody id="sheet-body"></tbody>
+          </table>
+          <p id="sheet-empty" class="sheet-empty" hidden></p>
+        </div>
+      </section>
+    </div>
+
+    <input id="file-pdf" type="file" accept="application/pdf,.pdf" hidden />
+    <input id="file-json" type="file" accept="application/json,.json" hidden />
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

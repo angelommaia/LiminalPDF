@@ -1,0 +1,10 @@
+node_modules/
+dist/
+release/
+*.exe
+*.zip
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

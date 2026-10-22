@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Montar PDF — LiminalPDF</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <link rel="stylesheet" href="/src/merge/merge.css" />
+  </head>
+  <body>
+    <div id="merge">
+      <header class="bar">
+        <div class="brand" title="LiminalPDF">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 2.75h8.5l4.25 4.25v14.25H6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" opacity=".85" />
+            <path d="M14.5 2.75V7h4.25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" opacity=".85" />
+            <polyline points="9,17.5 9,13.5 13,13.5 13,10.5 21.5,10.5" fill="none" stroke="#b42318" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+          </svg>
+          Montar PDF
+        </div>
+        <div class="cluster">
+          <button type="button" id="m-add" title="Adicionar arquivos PDF (Ctrl+O)">Adicionar PDFs…</button>
+        </div>
+        <div class="spacer"></div>
+        <span id="m-status" class="hint"></span>
+        <label class="open-after" title="Abrir o PDF gerado na janela principal">
+          <input type="checkbox" id="m-open-after" checked />
+          Abrir no editor
+        </label>
+        <button type="button" id="m-build" class="primary" disabled title="Gerar o PDF final (Ctrl+S)">
+          Gerar PDF…
+        </button>
+      </header>
+
+      <div class="m-body">
+        <aside id="m-sources">
+          <h2>Arquivos</h2>
+          <ul id="m-source-list"></ul>
+          <div id="m-drop" class="drop">
+            Arraste PDFs para cá<br />ou use <b>Adicionar PDFs…</b>
+          </div>
+        </aside>
+
+        <main id="m-main">
+          <div class="m-head">
+            <h2>Sequência do PDF final</h2>
+            <span id="m-total" class="quiet"></span>
+          </div>
+          <p class="m-help">
+            Cada trecho pega páginas de um arquivo, na ordem digitada: <code>1-5, 7, 9</code> ·
+            <code>45-66</code> · <code>10-fim</code> · <code>5-1</code> (invertido). Vazio = todas.
+            O mesmo arquivo pode aparecer em quantos trechos quiser. Arraste
+            <span class="grip-sample" aria-hidden="true">⋮⋮</span> para reordenar.
+          </p>
+          <ol id="m-pieces"></ol>
+          <div id="m-empty" class="m-empty">
+            <p>Nenhum trecho ainda.</p>
+            <p class="quiet">Adicione arquivos à esquerda; cada um entra com todas as páginas e você ajusta depois.</p>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <dialog id="m-picker">
+      <form method="dialog" class="picker">
+        <header>
+          <div>
+            <h2 id="p-title">Escolher páginas</h2>
+            <p class="quiet" id="p-sub"></p>
+          </div>
+          <div class="cluster">
+            <button type="button" id="p-all">Todas</button>
+            <button type="button" id="p-none">Nenhuma</button>
+          </div>
+        </header>
+        <div id="p-grid" class="p-grid"></div>
+        <footer>
+          <span id="p-spec" class="quiet"></span>
+          <span class="spacer"></span>
+          <span class="quiet p-note">Clique para marcar; Shift+clique marca um intervalo.</span>
+          <button value="ok" class="primary">Concluir</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <input id="m-file" type="file" accept="application/pdf,.pdf" multiple hidden />
+
+    <script type="module" src="/src/merge/main.ts"></script>
+  </body>
+</html>

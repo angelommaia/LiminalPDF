@@ -1,0 +1,718 @@
+:root {
+  /* cruz com contorno branco: aparece sobre o PDF branco e sobre o fundo escuro */
+  --cursor-cross: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cg stroke='%23fff' stroke-width='3' stroke-linecap='square'%3E%3Cpath d='M12.5 2v7M12.5 16v7M2 12.5h7M16 12.5h7'/%3E%3C/g%3E%3Cg stroke='%23000' stroke-width='1'%3E%3Cpath d='M12.5 2v7M12.5 16v7M2 12.5h7M16 12.5h7'/%3E%3C/g%3E%3Crect x='11.5' y='11.5' width='2' height='2' fill='%23000' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E") 12 12, crosshair;
+  /* cores fixas da marca (também usadas sobre a página do PDF) */
+  --mark: #b42318; /* vermelho de revisão */
+  --mark-on: #1d4e89; /* azul de seleção */
+  --font: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+/* ---- Sépia (padrão) ---- */
+:root,
+:root[data-theme="sepia"] {
+  color-scheme: light;
+  --paper: #e7e0d4;
+  --stage-top: #d9d1c4;
+  --ink: #1c1916;
+  --muted: #6d655c;
+  --bar: #241f1b;
+  --bar-text: #ece6dc;
+  --bar-quiet: #b4aa9c;
+  --bar-sep: #4a433c;
+  --bar-hover: #6a6158;
+  --bar-on: #3a332d;
+  --bar-on-border: #8a7d70;
+  --bar-border: transparent;
+  --line: #cfc6b8;
+  --side: #f3eee6;
+  --sheet-bg: #f7f3ec;
+  --row-line: #ece6dc;
+  --row-hover: #efe8da;
+  --page-border: #c5bcae;
+  --page-shadow: none;
+  --focus: #8a5a2b;
+  --danger: #8f1d18;
+  --danger-border: #e0c8c4;
+  --swatch-border: rgba(0, 0, 0, 0.25);
+}
+
+/* ---- Claro ---- */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --paper: #f1f1ef;
+  --stage-top: #e6e6e3;
+  --ink: #1c1916;
+  --muted: #66625c;
+  --bar: #ffffff;
+  --bar-text: #1c1916;
+  --bar-quiet: #6f6b64;
+  --bar-sep: #dcdad5;
+  --bar-hover: #c9c6bf;
+  --bar-on: #efeee9;
+  --bar-on-border: #b3afa7;
+  --bar-border: #dcdad5;
+  --line: #dcdad5;
+  --side: #ffffff;
+  --sheet-bg: #fbfbfa;
+  --row-line: #efeeea;
+  --row-hover: #f3f1ec;
+  --page-border: #d3d1cb;
+  --page-shadow: 0 1px 3px rgba(28, 25, 22, 0.08);
+  --focus: #8a5a2b;
+  --danger: #b42318;
+  --danger-border: #f0cfcb;
+  --swatch-border: rgba(0, 0, 0, 0.2);
+}
+
+/* ---- Escuro ---- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #1b1917;
+  --stage-top: #141210;
+  --ink: #ece6dc;
+  --muted: #a1988c;
+  --bar: #0f0d0c;
+  --bar-text: #ece6dc;
+  --bar-quiet: #8f877c;
+  --bar-sep: #36302b;
+  --bar-hover: #5a524a;
+  --bar-on: #2a2521;
+  --bar-on-border: #6a6158;
+  --bar-border: #241f1b;
+  --line: #3a342e;
+  --side: #201d1a;
+  --sheet-bg: #1d1a17;
+  --row-line: #2a2622;
+  --row-hover: #2c2824;
+  --page-border: #0a0908;
+  --page-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  --focus: #d29a5c;
+  --danger: #f08a7e;
+  --danger-border: #5a2a25;
+  --swatch-border: rgba(255, 255, 255, 0.28);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font: 13px/1.4 var(--font);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  height: 40px;
+  background: var(--bar);
+  color: var(--bar-text);
+  border-bottom: 1px solid var(--bar-border);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding-right: 8px;
+}
+
+.brand svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.themes {
+  display: flex;
+  gap: 5px;
+  padding-left: 10px;
+}
+
+.bar .themes button {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--bar-hover);
+}
+
+.bar .themes button[data-theme-choice="sepia"] {
+  background: #e7e0d4;
+}
+
+.bar .themes button[data-theme-choice="light"] {
+  background: #ffffff;
+}
+
+.bar .themes button[data-theme-choice="dark"] {
+  background: #1b1917;
+}
+
+.bar .themes button.on {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 2px;
+  background-clip: padding-box;
+}
+
+.cluster {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sep {
+  width: 1px;
+  height: 16px;
+  background: var(--bar-sep);
+  margin: 0 4px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.bar button {
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--bar-text);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.bar button:hover:not(:disabled) {
+  border-color: var(--bar-hover);
+}
+
+.bar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.bar button.on {
+  border-color: var(--bar-on-border);
+  background: var(--bar-on);
+}
+
+.quiet {
+  color: var(--bar-quiet);
+}
+
+#zoom-label {
+  min-width: 3.2em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  min-width: 0;
+  flex-shrink: 1;
+  color: var(--bar-quiet);
+  font-size: 12px;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+#stage {
+  flex: 1;
+  overflow: auto;
+  outline: none;
+  background:
+    linear-gradient(180deg, var(--stage-top), var(--paper));
+}
+
+#empty {
+  max-width: 28rem;
+  margin: 18vh auto 0;
+  padding: 0 1.5rem;
+  color: var(--muted);
+}
+
+.empty-title {
+  color: var(--ink);
+  font-size: 16px;
+  margin: 0 0 0.5rem;
+}
+
+#pages {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: max-content;
+  min-width: 100%;
+}
+
+.page {
+  position: relative;
+  border: 1px solid var(--page-border);
+  box-shadow: var(--page-shadow);
+  background: #fff;
+  line-height: 0;
+}
+
+.page canvas {
+  display: block;
+}
+
+.page svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.page svg .draft {
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+
+#side {
+  width: 204px;
+  flex-shrink: 0;
+  background: var(--side);
+  border-left: 1px solid var(--line);
+  overflow: auto;
+  padding: 10px 12px 14px;
+}
+
+#side h2,
+#sheet h2 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+#side .quiet {
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+#side label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+#side input,
+#side textarea {
+  display: block;
+  width: 100%;
+  margin-top: 3px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  padding: 4px 0;
+  resize: vertical;
+}
+
+#side input:focus,
+#side textarea:focus {
+  outline: none;
+  border-bottom-color: var(--focus);
+}
+
+#btn-delete {
+  margin-top: 8px;
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+#btn-delete.danger:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger-border);
+  cursor: pointer;
+}
+
+#sheet {
+  flex-shrink: 0;
+  height: 176px;
+  border-top: 1px solid var(--line);
+  position: relative;
+  background: var(--sheet-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.sheet-tabs button {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 5px 10px 4px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sheet-tabs button:hover {
+  color: var(--ink);
+}
+
+.sheet-tabs button.on {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--focus);
+}
+
+.sheet-tabs .count {
+  margin-left: 6px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.sheet-empty {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+td.note {
+  color: var(--muted);
+}
+
+td .clip {
+  display: inline-block;
+  max-width: 70ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+td.note .clip {
+  max-width: 48ch;
+}
+
+td.num {
+  font-variant-numeric: tabular-nums;
+  width: 1%;
+}
+
+.chip {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  vertical-align: -1px;
+}
+
+.chip.text {
+  width: 22px;
+  height: 14px;
+  font-size: 10px;
+  line-height: 12px;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid;
+  vertical-align: -3px;
+}
+
+.sheet-scroll {
+  overflow: auto;
+  flex: 1;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 3px 10px;
+  border-bottom: 1px solid var(--row-line);
+  white-space: nowrap;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+tbody tr {
+  cursor: pointer;
+}
+
+tbody tr:hover,
+tbody tr.on {
+  background: var(--row-hover);
+}
+
+#pages[hidden],
+#side[hidden],
+#sheet[hidden],
+#empty[hidden] {
+  display: none;
+}
+
+/* ---- v0.2: estilo, vértices, texto ---- */
+
+#stage[data-tool="line"],
+#stage[data-tool="polyline"],
+#stage[data-tool="rect"] {
+  cursor: var(--cursor-cross);
+}
+
+#stage[data-tool="text"] {
+  cursor: text;
+}
+
+.page svg .halo {
+  stroke: var(--mark-on);
+  stroke-opacity: 0.22;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.page svg .handle {
+  fill: #fff;
+  stroke: var(--mark-on);
+  stroke-width: 1.4;
+}
+
+.page svg .sel-box {
+  fill: none;
+  stroke: var(--mark-on);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.page svg foreignObject {
+  overflow: hidden;
+}
+
+.textbox,
+.text-editor {
+  font-family: var(--font);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  text-align: left;
+}
+
+.textbox {
+  user-select: none;
+  overflow: hidden;
+}
+
+.text-editor {
+  position: absolute;
+  z-index: 2;
+  border: 0 solid transparent;
+  background: rgba(255, 255, 255, 0.92);
+  outline: 1.5px solid var(--mark-on);
+  resize: none;
+  overflow: hidden;
+}
+
+#side section + section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+#side [hidden] {
+  display: none !important;
+}
+
+#side .row {
+  display: flex;
+  gap: 10px;
+}
+
+#side .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+#side input[type="color"] {
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+#side input[type="range"] {
+  border: 0;
+  padding: 0;
+  accent-color: var(--focus);
+}
+
+#side output {
+  float: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.swatches button {
+  aspect-ratio: 1;
+  border: 1px solid var(--swatch-border);
+  padding: 0;
+  cursor: pointer;
+}
+
+.swatches button:hover {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+
+/* ---- marca-texto ---- */
+
+/* camada de texto do pdf.js: invisível, só para localizar caracteres */
+.textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  user-select: none;
+  z-index: 0;
+}
+
+.textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  transform-origin: 0% 0%;
+}
+
+.textLayer span.markedContent {
+  top: 0;
+  height: 0;
+}
+
+/* a sobreposição desenha, mas não intercepta o ponteiro */
+.page svg {
+  pointer-events: none;
+  z-index: 1;
+}
+
+.page svg .hl {
+  mix-blend-mode: multiply;
+}
+
+#stage[data-tool="highlight"] {
+  cursor: var(--cursor-cross);
+}
+
+td.quote {
+  font-style: italic;
+  color: var(--ink);
+}
+
+/* alça para redimensionar a lista inferior */
+.sheet-resizer {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: ns-resize;
+  z-index: 3;
+}
+
+.sheet-resizer:hover,
+body.resizing-sheet .sheet-resizer {
+  background: linear-gradient(transparent 3px, var(--focus) 3px, var(--focus) 5px, transparent 5px);
+}
+
+body.resizing-sheet,
+body.resizing-sheet * {
+  cursor: ns-resize !important;
+  user-select: none;
+}
+
+/* cabeçalho da lista fixo ao rolar */
+#sheet thead th {
+  position: sticky;
+  top: 0;
+  background: var(--sheet-bg);
+  z-index: 1;
+}
+
+#side label {
+  margin-bottom: 8px !important;
+}
+
+/* canvas auxiliar que o pdf.js anexa ao <body> para medir texto:
+   sem esta regra ele cria uma barra de rolagem na janela inteira */
+.hiddenCanvasElement {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+html,
+body {
+  overflow: hidden;
+}

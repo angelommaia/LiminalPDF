@@ -1,0 +1,9 @@
+# Texto sempre com LF no repositório; o Git converte na sua máquina se precisar.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.ico binary
+*.icns binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
