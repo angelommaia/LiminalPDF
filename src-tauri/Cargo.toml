@@ -1,6 +1,6 @@
 [package]
 name = "liminalpdf"
-version = "0.1.0"
+version = "0.1.1"
 description = "Editor de anotações em PDF, FOSS e local"
 license = "MIT"
 edition = "2021"
