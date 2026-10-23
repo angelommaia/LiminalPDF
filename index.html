@@ -16,24 +16,26 @@
             <path d="M14.5 2.75V7h4.25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" opacity=".85" />
             <polyline points="9,17.5 9,13.5 13,13.5 13,10.5 21.5,10.5" fill="none" stroke="#b42318" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
           </svg>
-          Liminal
+          <span class="brand-text">Liminal</span>
         </div>
 
-        <div class="cluster">
-          <button type="button" id="btn-open" title="Abrir PDF">Abrir</button>
-          <button type="button" id="btn-load-marks" title="Carregar marcações (.json)" disabled>
-            Carregar
+        <div class="cluster file">
+          <button type="button" id="btn-open" title="Abrir PDFs, cada um numa aba (Ctrl+O)">
+            <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5h4.5l1.5 1.5h7v7.5h-13z"/></svg><span class="lbl">Abrir</span>
           </button>
-          <button type="button" id="btn-save" title="Salvar marcações (.json)" disabled>
-            Salvar
+          <button type="button" id="btn-load-marks" title="Carregar marcações (.json)" disabled>
+            <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v7.5M5 6.5l3 3 3-3M2.5 11v2.5h11V11"/></svg><span class="lbl">Carregar</span>
+          </button>
+          <button type="button" id="btn-save" title="Salvar marcações (Ctrl+S)" disabled>
+            <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 2.5h9l2 2v9h-11zM5 2.5v3h5.5v-3M5 13.5v-4h6v4"/></svg><span class="lbl">Salvar</span>
           </button>
         </div>
 
         <div class="sep"></div>
 
-        <div class="cluster">
-          <button type="button" id="btn-merge" title="Mesclar arquivos e escolher páginas num PDF novo (Ctrl+M)">
-            Montar PDF…
+        <div class="cluster file">
+          <button type="button" id="btn-merge" title="Montar PDF: juntar e escolher páginas num PDF novo (Ctrl+M)">
+            <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5h6l2.5 2.5v8H5zM2.5 4.5v10h8"/></svg><span class="lbl">Montar PDF…</span>
           </button>
         </div>
 
@@ -41,30 +43,34 @@
 
         <div class="cluster tools" role="toolbar" aria-label="Ferramentas">
           <button type="button" class="tool on" data-tool="select" title="Selecionar e pan (V)">
-            Selecionar
+            <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2l9 6.2-4 .8-2.2 3.8z"/></svg><span class="lbl">Selecionar</span>
           </button>
-          <button type="button" class="tool" data-tool="line" title="Linha (L)">Linha</button>
+          <button type="button" class="tool" data-tool="line" title="Linha (L)">
+            <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 12.5l9-9"/><rect x="1.8" y="11" width="3.2" height="3.2"/><rect x="11" y="1.8" width="3.2" height="3.2"/></svg><span class="lbl">Linha</span>
+          </button>
           <button type="button" class="tool" data-tool="polyline" title="Polilinha (P)">
-            Polilinha
+            <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 13.5v-5h5.5V3.5h6"/></svg><span class="lbl">Polilinha</span>
           </button>
           <button type="button" class="tool" data-tool="rect" title="Área retangular (R)">
-            Área
+            <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z"/></svg><span class="lbl">Área</span>
           </button>
           <button type="button" class="tool" data-tool="text" title="Caixa de texto (T)">
-            Texto
+            <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4h8M8 4v8.5M1.5 1.5h13v13h-13z"/></svg><span class="lbl">Texto</span>
           </button>
           <button type="button" class="tool" data-tool="highlight" title="Marca-texto: texto ou área livre (H)">
-            Marca-texto
+            <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2l4.5 4.5-5.5 5.5H4v-4.5zM2 14.5h12"/></svg><span class="lbl">Marca-texto</span>
           </button>
         </div>
 
         <div class="sep"></div>
 
         <div class="cluster">
-          <button type="button" id="btn-zoom-out" title="Reduzir">−</button>
+          <button type="button" id="btn-zoom-out" title="Reduzir (Ctrl+−)">−</button>
           <span id="zoom-label" class="quiet">—</span>
-          <button type="button" id="btn-zoom-in" title="Ampliar">+</button>
-          <button type="button" id="btn-fit" title="Ajustar à largura (Ctrl+0)" disabled>Ajustar</button>
+          <button type="button" id="btn-zoom-in" title="Ampliar (Ctrl++)">+</button>
+          <button type="button" id="btn-fit" title="Ajustar à largura (Ctrl+0)" disabled>
+            <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 8h13M4.5 5L1.5 8l3 3M11.5 5l3 3-3 3"/></svg><span class="lbl">Ajustar</span>
+          </button>
         </div>
 
         <div class="spacer"></div>
@@ -74,7 +80,12 @@
           <button type="button" data-theme-choice="light" title="Tema claro" aria-label="Tema claro"></button>
           <button type="button" data-theme-choice="dark" title="Tema escuro" aria-label="Tema escuro"></button>
         </div>
+        <button type="button" id="btn-side" class="on" title="Recolher painel lateral (Ctrl+B)" aria-label="Painel lateral">
+          <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 2.5h13v11h-13zM10 2.5v11"/></svg>
+        </button>
       </header>
+
+      <nav id="doc-tabs" class="doc-tabs" role="tablist" aria-label="Documentos abertos" hidden></nav>
 
       <div class="body">
         <main id="stage" tabindex="0">
@@ -84,7 +95,7 @@
               Abra um PDF. As marcações ficam num arquivo ao lado, sem alterar o original.
             </p>
           </div>
-          <div id="pages" hidden></div>
+          <div id="pages-host"></div>
         </main>
 
         <aside id="side" hidden>
@@ -193,7 +204,7 @@
       </section>
     </div>
 
-    <input id="file-pdf" type="file" accept="application/pdf,.pdf" hidden />
+    <input id="file-pdf" type="file" accept="application/pdf,.pdf" multiple hidden />
     <input id="file-json" type="file" accept="application/json,.json" hidden />
 
     <script type="module" src="/src/main.ts"></script>

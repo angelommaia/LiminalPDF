@@ -268,7 +268,7 @@ textarea {
   margin: 0 0 0.5rem;
 }
 
-#pages {
+.pages {
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -490,7 +490,7 @@ tbody tr.on {
   background: var(--row-hover);
 }
 
-#pages[hidden],
+.pages[hidden],
 #side[hidden],
 #sheet[hidden],
 #empty[hidden] {
@@ -715,4 +715,144 @@ body.resizing-sheet * {
 html,
 body {
   overflow: hidden;
+}
+
+/* ---- ícones da barra ---- */
+
+.bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bar .ic {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.bar .tool[data-tool="select"] .ic path {
+  fill: currentColor;
+  fill-opacity: 0.18;
+}
+
+#btn-side {
+  margin-left: 6px;
+}
+
+/* telas estreitas (janela dividida ao meio): só ícones */
+@media (max-width: 1360px) {
+  .bar .tools .lbl,
+  #btn-fit .lbl {
+    display: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .bar .file .lbl,
+  .brand .brand-text,
+  .hint {
+    display: none;
+  }
+  .bar {
+    gap: 4px;
+    padding: 0 6px;
+  }
+  .bar .sep {
+    margin: 0 2px;
+  }
+}
+
+/* ---- abas de documentos ---- */
+
+.doc-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  height: 30px;
+  flex-shrink: 0;
+  padding: 0 6px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.doc-tabs[hidden] {
+  display: none;
+}
+
+.doc-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 220px;
+  min-width: 90px;
+  padding: 0 4px 0 10px;
+  margin-top: 4px;
+  color: var(--bar-quiet);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+}
+
+.doc-tab:hover {
+  color: var(--bar-text);
+}
+
+.doc-tab.on {
+  color: var(--ink);
+  background: var(--stage-top);
+  border-color: var(--line);
+}
+
+.doc-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-close,
+.doc-add {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 20px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.doc-close:hover,
+.doc-add:hover {
+  opacity: 1;
+  background: var(--bar-on);
+}
+
+.doc-add {
+  align-self: center;
+  margin-left: 4px;
+  color: var(--bar-quiet);
+  font-size: 16px;
+}
+
+/* ---- painel lateral recolhido ---- */
+
+#app.side-collapsed #side {
+  display: none;
 }

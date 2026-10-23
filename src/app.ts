@@ -37,7 +37,8 @@ import {
 } from "./overlay";
 import * as desktop from "./desktop";
 import { caretNear, measure, textAt, type Box, type Caret } from "./textsel";
-import { PdfView, type PageSlot } from "./pdf-view";
+import { Doc } from "./doc";
+import type { PageSlot, PdfView } from "./pdf-view";
 
 const ZOOM_STEP = 1.15;
 const MIN_ZOOM = 0.2;
@@ -113,21 +114,13 @@ const $ = <T extends HTMLElement>(id: string): T => {
 };
 
 export class App {
-  private view: PdfView;
-  private marks: Mark[] = [];
-  private history: Mark[][] = [];
-  private future: Mark[][] = [];
+  /** Abas abertas e a ativa. Sem nenhuma aba, `doc` é um documento vazio. */
+  private docs: Doc[] = [];
+  private doc!: Doc;
   private tool: Tool = "select";
-  private selected: string | null = null;
   private drag: Drag | null = null;
-  private pdfName = "";
-  private _dirty = false;
-  /** Caminhos no disco (só no app desktop). */
-  private pdfPath: string | null = null;
-  /** Cópia dos bytes do PDF aberto (o pdf.js consome o buffer original). */
-  private pdfBytes: Uint8Array | null = null;
   private mergeWin: Window | null = null;
-  private marksPath: string | null = null;
+  private sideCollapsed = false;
   /** Posição do cursor em coordenadas PDF (já com Shift aplicado). */
   private cursor: { page: number; pdf: Pt } | null = null;
   private lastPointer: { clientX: number; clientY: number; shiftKey: boolean } | null =
@@ -140,7 +133,6 @@ export class App {
   private lastDown: { t: number; x: number; y: number } | null = null;
   private editSession = false;
   private editor: Editor | null = null;
-  private saveHandle: FileHandle | null = null;
   private stroke: StrokeStyle = { ...DEFAULT_STROKE };
   /** Aba ativa da lista inferior. */
   private sheetTab: Mark["type"] = "polyline";
@@ -150,7 +142,8 @@ export class App {
 
   private ui = {
     stage: $("stage"),
-    pages: $("pages"),
+    pagesHost: $("pages-host"),
+    docTabs: $("doc-tabs"),
     empty: $("empty"),
     side: $("side"),
     sheet: $("sheet"),
@@ -192,6 +185,7 @@ export class App {
       load: $<HTMLButtonElement>("btn-load-marks"),
       save: $<HTMLButtonElement>("btn-save"),
       merge: $<HTMLButtonElement>("btn-merge"),
+      side: $<HTMLButtonElement>("btn-side"),
       zoomIn: $<HTMLButtonElement>("btn-zoom-in"),
       zoomOut: $<HTMLButtonElement>("btn-zoom-out"),
       fit: $<HTMLButtonElement>("btn-fit"),
@@ -202,8 +196,9 @@ export class App {
   };
 
   constructor() {
-    this.view = new PdfView(this.ui.pages);
+    this.doc = new Doc(this.ui.pagesHost);
     this.loadStyles();
+    this.loadSide();
     this.bind();
     this.syncInspector();
     this.setHint("Abra um PDF para começar.");
@@ -217,6 +212,7 @@ export class App {
     b.load.addEventListener("click", () => void this.loadMarks());
     b.save.addEventListener("click", () => void this.save(false));
     b.merge.addEventListener("click", () => void this.openMerge());
+    b.side.addEventListener("click", () => this.toggleSide());
     window.addEventListener("message", (e) => this.onWebMessage(e));
     b.zoomIn.addEventListener("click", () => void this.zoomBy(ZOOM_STEP));
     b.zoomOut.addEventListener("click", () => void this.zoomBy(1 / ZOOM_STEP));
@@ -224,9 +220,11 @@ export class App {
     b.del.addEventListener("click", () => this.removeSelected());
 
     this.ui.filePdf.addEventListener("change", () => {
-      const f = this.ui.filePdf.files?.[0];
+      const files = [...(this.ui.filePdf.files ?? [])];
       this.ui.filePdf.value = "";
-      if (f) void this.openPdf(f);
+      void (async () => {
+        for (const f of files) await this.openPdf(f);
+      })();
     });
     this.ui.fileJson.addEventListener("change", () => {
       const f = this.ui.fileJson.files?.[0];
@@ -250,11 +248,14 @@ export class App {
     stage.addEventListener("dragover", (e) => e.preventDefault());
     stage.addEventListener("drop", (e) => {
       e.preventDefault();
-      const f = e.dataTransfer?.files[0];
-      if (!f) return;
-      const name = f.name.toLowerCase();
-      if (f.type === "application/pdf" || name.endsWith(".pdf")) void this.openPdf(f);
-      else if (name.endsWith(".json") && this.view.doc) void this.openSidecar(f, null);
+      const files = [...(e.dataTransfer?.files ?? [])];
+      const pdfs = files.filter((f) => f.type === "application/pdf" || /\.pdf$/i.test(f.name));
+      const json = files.find((f) => /\.json$/i.test(f.name));
+      if (pdfs.length) {
+        void (async () => {
+          for (const f of pdfs) await this.openPdf(f);
+        })();
+      } else if (json && this.view.doc) void this.openSidecar(json, null);
     });
 
     window.addEventListener("keydown", (e) => this.onKey(e));
@@ -388,19 +389,80 @@ export class App {
     this.ui.hint.textContent = text;
   }
 
+  /* ---- estado do documento ativo (cada aba guarda o seu) ---- */
+
+  private get view(): PdfView {
+    return this.doc.view;
+  }
+  private get marks(): Mark[] {
+    return this.doc.marks;
+  }
+  private set marks(v: Mark[]) {
+    this.doc.marks = v;
+  }
+  private get history(): Mark[][] {
+    return this.doc.history;
+  }
+  private set history(v: Mark[][]) {
+    this.doc.history = v;
+  }
+  private get future(): Mark[][] {
+    return this.doc.future;
+  }
+  private set future(v: Mark[][]) {
+    this.doc.future = v;
+  }
+  private get selected(): string | null {
+    return this.doc.selected;
+  }
+  private set selected(v: string | null) {
+    this.doc.selected = v;
+  }
+  private get pdfName(): string {
+    return this.doc.name;
+  }
+  private set pdfName(v: string) {
+    this.doc.name = v;
+  }
+  private get pdfPath(): string | null {
+    return this.doc.path;
+  }
+  private set pdfPath(v: string | null) {
+    this.doc.path = v;
+  }
+  private get marksPath(): string | null {
+    return this.doc.marksPath;
+  }
+  private set marksPath(v: string | null) {
+    this.doc.marksPath = v;
+  }
+  private get pdfBytes(): Uint8Array | null {
+    return this.doc.bytes;
+  }
+  private set pdfBytes(v: Uint8Array | null) {
+    this.doc.bytes = v;
+  }
+  private get saveHandle(): FileHandle | null {
+    return this.doc.saveHandle as FileHandle | null;
+  }
+  private set saveHandle(v: FileHandle | null) {
+    this.doc.saveHandle = v;
+  }
+
   private get dirty(): boolean {
-    return this._dirty;
+    return this.doc.dirty;
   }
 
   private set dirty(v: boolean) {
-    if (v === this._dirty) return;
-    this._dirty = v;
+    if (v === this.doc.dirty) return;
+    this.doc.dirty = v;
     this.updateTitle();
+    this.renderTabs();
   }
 
   private updateTitle(): void {
     const t = this.pdfName
-      ? `${this._dirty ? "● " : ""}${this.pdfName} — LiminalPDF`
+      ? `${this.dirty ? "● " : ""}${this.pdfName} — LiminalPDF`
       : "LiminalPDF";
     document.title = t;
     if (desktop.isDesktop) desktop.setTitle(t);
@@ -408,12 +470,12 @@ export class App {
 
   /** Chamado uma vez pelo main.ts quando roda dentro do Tauri. */
   async startDesktop(): Promise<void> {
-    desktop.guardClose(() => this.dirty);
+    desktop.guardClose(() => this.isDirty());
     desktop.onOpenRequest((path) => void this.openPdfPath(path));
     desktop.onDropPaths((paths) => {
-      const pdf = paths.find((p) => /\.pdf$/i.test(p));
+      const pdfs = paths.filter((p) => /\.pdf$/i.test(p));
       const json = paths.find((p) => /\.json$/i.test(p));
-      if (pdf) void this.openPdfPath(pdf);
+      if (pdfs.length) void this.openPaths(pdfs);
       else if (json && this.view.doc) void this.loadMarksPath(json);
     });
     // atalhos do navegador que não fazem sentido numa janela de app
@@ -446,8 +508,11 @@ export class App {
       this.ui.filePdf.click();
       return;
     }
-    const path = await desktop.pickPdf();
-    if (path) await this.openPdfPath(path);
+    await this.openPaths(await desktop.pickPdfs());
+  }
+
+  private async openPaths(paths: string[]): Promise<void> {
+    for (const p of paths) await this.openPdfPath(p);
   }
 
   /**
@@ -455,7 +520,11 @@ export class App {
    * ao lado, carrega as marcações. O Ctrl+S grava nesse mesmo arquivo.
    */
   private async openPdfPath(path: string): Promise<void> {
-    if (!(await this.okToDiscard())) return;
+    const same = this.docs.find((d) => d.path === path);
+    if (same) {
+      this.activate(same);
+      return;
+    }
     try {
       const data = await desktop.readPdf(path);
       await this.openPdfData(data, desktop.basename(path));
@@ -475,12 +544,17 @@ export class App {
   }
 
   private async openPdf(file: File): Promise<void> {
-    if (!(await this.okToDiscard())) return;
     await this.openPdfData(await file.arrayBuffer(), file.name);
   }
 
+  /** Abre o PDF numa aba nova (ou na aba vazia, se for a primeira). */
   private async openPdfData(data: ArrayBuffer, name: string): Promise<void> {
     this.commitEditor();
+    const d = this.doc.opened ? new Doc(this.ui.pagesHost) : this.doc;
+    if (!this.docs.includes(d)) this.docs.push(d);
+    this.activate(d);
+    d.opened = true;
+    d.pagesEl.hidden = false;
     this.pdfBytes = new Uint8Array(data.slice(0));
     await this.view.load(data);
     this.pdfName = name;
@@ -492,18 +566,12 @@ export class App {
     this.selected = null;
     this.dirty = false;
     this.saveHandle = null;
-    this.ui.empty.hidden = true;
-    this.ui.pages.hidden = false;
-    this.ui.side.hidden = false;
-    this.ui.sheet.hidden = false;
-    this.ui.buttons.load.disabled = false;
-    this.ui.buttons.save.disabled = false;
-    this.ui.buttons.fit.disabled = false;
-    await this.fit();
-    this.ui.stage.scrollTop = 0;
+    this.syncChrome();
+    this.renderTabs();
     this.updateTitle();
     this.setHint(`Documento: ${name}`);
-    this.ui.stage.focus();
+    await this.fit(true);
+    if (this.doc === d) this.ui.stage.focus();
   }
 
   private async loadMarks(): Promise<void> {
@@ -649,9 +717,7 @@ export class App {
     } else if (msg.type === "liminal:open-bytes" && msg.bytes && msg.name) {
       const bytes = msg.bytes;
       const name = msg.name;
-      void this.okToDiscard().then((ok) => {
-        if (ok) void this.openPdfData(bytes, name);
-      });
+      void this.openPdfData(bytes, name);
     }
   }
 
@@ -667,9 +733,10 @@ export class App {
     void this.zoomBy(factor, { clientX: e.clientX, clientY: e.clientY });
   }
 
-  private async fit(): Promise<void> {
+  /** Ajusta à largura; `top` leva ao início do documento (ao abrir). */
+  private async fit(top = false): Promise<void> {
     const scale = this.view.fitWidthScale(this.ui.stage.clientWidth);
-    await this.setScale(scale, null);
+    await this.setScale(scale, null, top);
   }
 
   private async zoomBy(
@@ -702,8 +769,13 @@ export class App {
   private async setScale(
     scale: number,
     anchor: { clientX: number; clientY: number } | null,
+    top = false,
   ): Promise<void> {
     if (!this.view.doc) return;
+    // a renderização é assíncrona: se o usuário trocar de aba no meio,
+    // não mexe na rolagem nem desenha a outra aba
+    const doc = this.doc;
+    const view = this.view;
     this.commitEditor();
     const stage = this.ui.stage;
     const sr = stage.getBoundingClientRect();
@@ -715,12 +787,18 @@ export class App {
     const cx = (stage.scrollLeft + stage.clientWidth / 2) / Math.max(stage.scrollWidth, 1);
     const cy = (stage.scrollTop + stage.clientHeight / 2) / Math.max(stage.scrollHeight, 1);
 
-    await this.view.render(scale, () => {
+    await view.render(scale, () => {
+      if (this.doc !== doc) return;
       this.ui.zoomLabel.textContent = `${Math.round(scale * 100)}%`;
       this.redraw();
-      const slot = hit ? this.view.slotAt(hit.slot.pageNum) : undefined;
+      if (top) {
+        stage.scrollTop = 0;
+        stage.scrollLeft = 0;
+        return;
+      }
+      const slot = hit ? view.slotAt(hit.slot.pageNum) : undefined;
       if (hit && slot) {
-        const v = this.view.toView(slot, hit.pdf);
+        const v = view.toView(slot, hit.pdf);
         const r = slot.svg.getBoundingClientRect();
         stage.scrollLeft += r.left + v.x - at.clientX;
         stage.scrollTop += r.top + v.y - at.clientY;
@@ -1196,6 +1274,31 @@ export class App {
     if (ctrl && k === "-") {
       e.preventDefault();
       void this.zoomBy(1 / ZOOM_STEP);
+      return;
+    }
+    if (ctrl && e.key === "Tab") {
+      e.preventDefault();
+      this.cycleDoc(e.shiftKey ? -1 : 1);
+      return;
+    }
+    if (ctrl && (e.key === "PageDown" || e.key === "PageUp")) {
+      e.preventDefault();
+      this.cycleDoc(e.key === "PageDown" ? 1 : -1);
+      return;
+    }
+    if (ctrl && k === "w") {
+      e.preventDefault();
+      if (this.doc.opened) void this.closeDoc(this.doc);
+      return;
+    }
+    if (ctrl && k === "o") {
+      e.preventDefault();
+      void this.openDialog();
+      return;
+    }
+    if (ctrl && k === "b") {
+      e.preventDefault();
+      this.toggleSide();
       return;
     }
     if (ctrl && k === "m") {
@@ -1742,7 +1845,145 @@ export class App {
   }
 
   isDirty(): boolean {
-    return this.dirty;
+    return this.docs.some((d) => d.dirty);
+  }
+
+  /* ------------------------------------------------------------ abas */
+
+  /** Troca a aba ativa, guardando rolagem e estado transitório da anterior. */
+  private activate(d: Doc): void {
+    if (d === this.doc) return;
+    this.commitEditor();
+    const stage = this.ui.stage;
+    const prev = this.doc;
+    prev.scrollTop = stage.scrollTop;
+    prev.scrollLeft = stage.scrollLeft;
+    prev.pagesEl.hidden = true;
+    if (!prev.opened && !this.docs.includes(prev)) prev.destroy();
+    this.drag = null;
+    this.cursor = null;
+    this.editSession = false;
+    this.doc = d;
+    d.pagesEl.hidden = !d.opened;
+    stage.scrollTop = d.scrollTop;
+    stage.scrollLeft = d.scrollLeft;
+    this.ui.zoomLabel.textContent = d.opened ? `${Math.round(d.view.scale * 100)}%` : "—";
+    const sel = this.current();
+    if (sel) this.sheetTab = sel.type;
+    this.syncChrome();
+    this.updateTitle();
+    this.renderTabs();
+    this.redraw();
+    if (d.opened) this.setHint(d.path ?? d.name);
+  }
+
+  private async closeDoc(d: Doc): Promise<void> {
+    if (d.dirty) {
+      const msg = `${d.name} tem marcações não salvas. Fechar mesmo assim?`;
+      const ok = desktop.isDesktop ? await desktop.confirmAsk(msg, "Fechar") : window.confirm(msg);
+      if (!ok) return;
+    }
+    const i = this.docs.indexOf(d);
+    if (i < 0) return;
+    if (d === this.doc) {
+      const next = this.docs[i + 1] ?? this.docs[i - 1];
+      this.activate(next ?? new Doc(this.ui.pagesHost));
+    }
+    this.docs.splice(i, 1);
+    d.destroy();
+    this.syncChrome();
+    this.renderTabs();
+    if (!this.docs.length) this.setHint("Abra um PDF para começar.");
+  }
+
+  private cycleDoc(delta: number): void {
+    if (this.docs.length < 2) return;
+    const i = this.docs.indexOf(this.doc);
+    this.activate(this.docs[(i + delta + this.docs.length) % this.docs.length]);
+  }
+
+  /** Mostra ou esconde partes da interface conforme haja documento aberto. */
+  private syncChrome(): void {
+    const has = this.doc.opened;
+    const u = this.ui;
+    u.empty.hidden = has;
+    u.side.hidden = !has;
+    u.sheet.hidden = !has;
+    u.buttons.load.disabled = !has;
+    u.buttons.save.disabled = !has;
+    u.buttons.fit.disabled = !has;
+    u.docTabs.hidden = this.docs.length === 0;
+  }
+
+  private renderTabs(): void {
+    const bar = this.ui.docTabs;
+    const tabs = this.docs.map((d) => {
+      const tab = document.createElement("div");
+      tab.className = "doc-tab";
+      tab.classList.toggle("on", d === this.doc);
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", String(d === this.doc));
+      tab.title = d.path ?? d.name;
+      const name = document.createElement("span");
+      name.className = "doc-name";
+      name.textContent = d.name.replace(/\.pdf$/i, "");
+      const close = document.createElement("button");
+      close.type = "button";
+      close.className = "doc-close";
+      close.textContent = d.dirty ? "●" : "×";
+      close.title = d.dirty ? "Não salvo · fechar (Ctrl+W)" : "Fechar (Ctrl+W)";
+      close.setAttribute("aria-label", `Fechar ${d.name}`);
+      close.addEventListener("click", (e) => {
+        e.stopPropagation();
+        void this.closeDoc(d);
+      });
+      tab.append(name, close);
+      tab.addEventListener("click", () => this.activate(d));
+      tab.addEventListener("auxclick", (e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          void this.closeDoc(d);
+        }
+      });
+      return tab;
+    });
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "doc-add";
+    add.textContent = "+";
+    add.title = "Abrir outro PDF (Ctrl+O)";
+    add.addEventListener("click", () => void this.openDialog());
+    bar.replaceChildren(...tabs, add);
+    bar.querySelector(".doc-tab.on")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+
+  /* ------------------------------------------------------------ painel lateral */
+
+  private loadSide(): void {
+    try {
+      this.sideCollapsed = localStorage.getItem("liminalpdf.sideCollapsed") === "1";
+    } catch {
+      /* sem armazenamento */
+    }
+    this.applySide();
+  }
+
+  private toggleSide(): void {
+    this.sideCollapsed = !this.sideCollapsed;
+    this.applySide();
+    try {
+      localStorage.setItem("liminalpdf.sideCollapsed", this.sideCollapsed ? "1" : "0");
+    } catch {
+      /* ignora */
+    }
+  }
+
+  private applySide(): void {
+    $("app").classList.toggle("side-collapsed", this.sideCollapsed);
+    const b = this.ui.buttons.side;
+    b.classList.toggle("on", !this.sideCollapsed);
+    b.setAttribute("aria-pressed", String(!this.sideCollapsed));
+    b.title = this.sideCollapsed ? "Mostrar painel lateral (Ctrl+B)" : "Recolher painel lateral (Ctrl+B)";
   }
 }
 

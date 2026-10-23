@@ -11,19 +11,24 @@
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-1d4e89?style=flat-square">
 </p>
 
-<p align="center"><b>O melhor programa é o que não existe.</b></p>
+<p align="center"><b>Esse programa não existe.</b></p>
 
-O LiminalPDF quer ser isso: nenhuma impedância entre você e o seu trabalho. Abre rápido, marca o que precisa e sai da frente. Leve, prático, útil. Livre (MIT), local, sem conta e sem nuvem.
+O objetivo do LiminalPDF é esse: ser apenas um espaço transitório entre você e o seu trabalho. Sem chamar atenção, sem funções desnecessárias, sem conta, login, IA, nuvem etc. O LiminalPDF é leve, prático, útil e livre (MIT).
 
-É um editor de anotações em PDF pensado para revisão de projetos de engenharia: unifilares, malhas, diagramas, memoriais. O PDF original nunca é alterado; as marcações ficam num `.json` ao lado dele.
+O LiminalPDF é um editor de anotações em PDF pensado para revisão de projetos de engenharia: unifilares, malhas, diagramas, memoriais. Seus comentários podem carregar informações em campos de anotação, tornando o processo de validação muito mais valioso, rastreável e bem documentado. Além disso, o PDF original nunca é alterado: as marcações ficam num `.json` ao lado dele.
 
-**O que faz**
+**Funções**
 
 - Linhas e polilinhas com de–para (origem, destino, função, circuito, status), travamento em 45° com Shift e vértices editáveis
 - Áreas, caixas de texto e marca-texto (sobre o texto ou em área livre)
 - Lista das marcações por tipo, com notas, sempre à vista
 - **Montar PDF**: junta páginas de vários arquivos, em qualquer ordem, num PDF novo
 - Três temas (sépia, claro e escuro); a página do PDF continua branca em todos
+- Múltiplas abas
+
+**Funções futuras**
+
+- Você decide! Sugira em [Issues](../../issues).
 
 ## Por que existe
 
@@ -61,9 +66,19 @@ No app:
 | espaço / botão do meio | Pan | Mesmo com outra ferramenta ativa |
 | setas | Mover | Move a seleção 1 px (Shift: 10 px) |
 | `Ctrl+M` | Montar PDF | Abre a janela de mesclar e escolher páginas |
+| `Ctrl+O` | Abrir | Um ou vários PDFs, cada um numa aba |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Abas | Próximo / anterior documento (também `Ctrl+PgDn` / `Ctrl+PgUp`) |
+| `Ctrl+W` | Fechar aba | Pergunta se houver marcações não salvas (botão do meio na aba também fecha) |
+| `Ctrl+B` | Painel lateral | Recolhe ou mostra o painel de marcação e estilo |
 | `Ctrl+S` / `Ctrl+Shift+S` | Salvar / Salvar como | No Edge/Chrome, grava sempre no mesmo `.liminal.json` |
 | `Ctrl+Z` / `Ctrl+Y` | Desfazer / Refazer | |
 | `Del` | Excluir | Marcação selecionada |
+
+### Vários documentos e tela dividida
+
+Cada PDF abre numa aba, com suas próprias marcações, histórico de desfazer, zoom e posição; o `.liminal.json` de cada um é carregado e salvo separadamente. Abrir de novo um arquivo que já está aberto só troca para a aba dele.
+
+Para comparar lado a lado, abra o LiminalPDF duas vezes e encaixe cada janela numa metade da tela (`Win+←` / `Win+→`). Em janelas estreitas a barra mostra só ícones, e o painel lateral pode ser recolhido com `Ctrl+B` ou pelo botão no canto direito da barra.
 
 ### Marca-texto
 
