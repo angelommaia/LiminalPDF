@@ -73,6 +73,20 @@
           </button>
         </div>
 
+        <div class="sep"></div>
+
+        <div class="cluster nav" role="group" aria-label="Páginas">
+          <button type="button" id="btn-prev" title="Página anterior (PgUp)" disabled>‹</button>
+          <input id="page-input" type="text" inputmode="numeric" autocomplete="off" title="Ir para a página (Enter)" aria-label="Página atual" disabled />
+          <span id="page-count" class="quiet">/ —</span>
+          <button type="button" id="btn-next" title="Próxima página (PgDn)" disabled>›</button>
+          <button type="button" id="btn-mode" title="Navegação contínua · clique para página única" disabled>
+            <svg class="ic" id="ic-continuous" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1v5.5h8V1M4 15V9.5h8V15"/></svg>
+            <svg class="ic" id="ic-single" viewBox="0 0 16 16" aria-hidden="true" hidden><path d="M3.5 1.5h9v13h-9z"/></svg>
+            <span class="lbl" id="mode-label">Contínuo</span>
+          </button>
+        </div>
+
         <div class="spacer"></div>
         <span id="hint" class="hint"></span>
         <div class="themes" role="group" aria-label="Tema">
@@ -106,19 +120,23 @@
             <div id="grp-rel">
               <label>
                 Origem
-                <input id="f-from" type="text" autocomplete="off" />
+                <input id="f-from" type="text" list="list-from" autocomplete="off" />
+                <datalist id="list-from"></datalist>
               </label>
               <label>
                 Destino
-                <input id="f-to" type="text" autocomplete="off" />
+                <input id="f-to" type="text" list="list-to" autocomplete="off" />
+                <datalist id="list-to"></datalist>
               </label>
               <label>
                 Função
-                <input id="f-fn" type="text" autocomplete="off" />
+                <input id="f-fn" type="text" list="list-fn" autocomplete="off" />
+                <datalist id="list-fn"></datalist>
               </label>
               <label>
                 Circuito
-                <input id="f-circuit" type="text" autocomplete="off" />
+                <input id="f-circuit" type="text" list="list-circuit" autocomplete="off" />
+                <datalist id="list-circuit"></datalist>
               </label>
               <label>
                 Status

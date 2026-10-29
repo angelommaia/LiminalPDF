@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## Próxima versão
+
+- Navegação contínua ou página a página (botão na barra), com campo para ir a uma página, ‹ ›, PgUp/PgDn e Home/End
+- Origem, Destino, Função, Circuito e Status sugerem os valores já usados naquele campo nas linhas e polilinhas do documento (cada aba tem as suas sugestões)
+- Clicar no desenho tira o foco dos campos do painel: Enter e os atalhos voltam a funcionar logo depois de preencher um campo
+
 ## 0.1.1
 
 - Vários documentos abertos ao mesmo tempo, cada um numa aba, com marcações, desfazer, zoom e posição próprios (`Ctrl+O` abre vários; `Ctrl+Tab` alterna; `Ctrl+W` fecha)

@@ -856,3 +856,42 @@ body {
 #app.side-collapsed #side {
   display: none;
 }
+
+/* ---- navegação por páginas ---- */
+
+.nav #page-input {
+  width: 3.4em;
+  height: 22px;
+  text-align: center;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--bar-text);
+  background: transparent;
+  border: 1px solid var(--bar-sep);
+  padding: 0 2px;
+}
+
+.nav #page-input:focus {
+  outline: none;
+  border-color: var(--focus);
+}
+
+.nav #page-input:disabled {
+  opacity: 0.4;
+}
+
+#page-count {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* página única: só a página atual fica no fluxo */
+.pages.single .page:not(.current) {
+  display: none;
+}
+
+@media (max-width: 1360px) {
+  #btn-mode .lbl {
+    display: none;
+  }
+}

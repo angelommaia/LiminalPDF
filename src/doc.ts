@@ -27,6 +27,8 @@ export class Doc {
   selected: string | null = null;
   scrollTop = 0;
   scrollLeft = 0;
+  /** Página atual (base 1): a visível no modo página única. */
+  page = 1;
 
   constructor(container: HTMLElement) {
     this.pagesEl = document.createElement("div");

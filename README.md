@@ -70,9 +70,15 @@ No app:
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Abas | Próximo / anterior documento (também `Ctrl+PgDn` / `Ctrl+PgUp`) |
 | `Ctrl+W` | Fechar aba | Pergunta se houver marcações não salvas (botão do meio na aba também fecha) |
 | `Ctrl+B` | Painel lateral | Recolhe ou mostra o painel de marcação e estilo |
+| `PgUp` / `PgDn` | Página | Página única: anterior / próxima. Contínuo: rola uma tela |
+| `Home` / `End` | Página | Primeira / última página |
 | `Ctrl+S` / `Ctrl+Shift+S` | Salvar / Salvar como | No Edge/Chrome, grava sempre no mesmo `.liminal.json` |
 | `Ctrl+Z` / `Ctrl+Y` | Desfazer / Refazer | |
 | `Del` | Excluir | Marcação selecionada |
+
+### Navegação: contínua ou página a página
+
+O botão ao lado do número da página alterna entre **Contínuo** (todas as páginas numa rolagem só) e **Página única** (uma página por vez, como no PDF-XChange). Na página única, rolar além do fim da página passa para a próxima, e rolar acima do topo volta para a anterior. O campo de página leva direto a qualquer página (digite o número e Enter), e as setas ‹ › avançam ou voltam. A escolha fica lembrada, e cada aba guarda a página em que estava.
 
 ### Vários documentos e tela dividida
 
@@ -104,7 +110,7 @@ Com uma marcação selecionada aparecem alças nos vértices (linha, polilinha) 
 
 O painel lateral ajusta cor, espessura (em pt, acompanha o zoom) e opacidade da seleção. Sem nada selecionado, ajusta o estilo padrão da próxima marcação. Caixas de texto têm ainda cor e tamanho do texto, cor e opacidade do fundo, e moldura (cor, espessura, opacidade; espessura 0 = sem moldura).
 
-Linhas e polilinhas carregam o de–para (origem, destino, função, circuito, status e nota). Áreas e caixas de texto têm nota. A lista inferior tem uma aba por tipo (Linha, Polilinha, Área, Texto); selecionar uma marcação abre a aba dela, e clicar numa linha da lista seleciona a marcação na página.
+Linhas e polilinhas carregam o de–para (origem, destino, função, circuito, status e nota). Origem, Destino, Função, Circuito e Status oferecem como sugestão os valores já usados naquele mesmo campo nas linhas e polilinhas do documento; um valor novo passa a valer na hora para todas, novas e existentes. A Nota é livre. Áreas e caixas de texto têm nota. A lista inferior tem uma aba por tipo (Linha, Polilinha, Área, Texto); selecionar uma marcação abre a aba dela, e clicar numa linha da lista seleciona a marcação na página.
 
 ## Arquivo de marcações
 

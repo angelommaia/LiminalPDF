@@ -51,6 +51,7 @@ const SWATCHES = [
   "#7a2a8c", "#0e7c86", "#1c1916", "#e5b400",
 ];
 const HL_SWATCHES = ["#ffd400", "#7ee081", "#ff8fc7", "#7cc8ff", "#ffa94d", "#c39bff", "#ff6b6b", "#b8b8b8"];
+const STATUS_DEFAULTS = ["ok", "pendente", "divergente", "proposto", "existente"];
 const STORE_KEY = "liminalpdf.styles";
 const SHEET_KEY = "liminalpdf.sheetHeight";
 /** Altura padrão da lista: abas + cabeçalho + 5 linhas. */
@@ -121,6 +122,12 @@ export class App {
   private drag: Drag | null = null;
   private mergeWin: Window | null = null;
   private sideCollapsed = false;
+  /** "continuous": todas as páginas roláveis; "single": uma página por vez. */
+  private pageMode: "continuous" | "single" = "continuous";
+  /** Acúmulo da roda na borda da página (modo página única). */
+  private flipAccum = 0;
+  private flipAt = 0;
+  private scrollRaf = 0;
   /** Posição do cursor em coordenadas PDF (já com Shift aplicado). */
   private cursor: { page: number; pdf: Pt } | null = null;
   private lastPointer: { clientX: number; clientY: number; shiftKey: boolean } | null =
@@ -186,11 +193,16 @@ export class App {
       save: $<HTMLButtonElement>("btn-save"),
       merge: $<HTMLButtonElement>("btn-merge"),
       side: $<HTMLButtonElement>("btn-side"),
+      prev: $<HTMLButtonElement>("btn-prev"),
+      next: $<HTMLButtonElement>("btn-next"),
+      mode: $<HTMLButtonElement>("btn-mode"),
       zoomIn: $<HTMLButtonElement>("btn-zoom-in"),
       zoomOut: $<HTMLButtonElement>("btn-zoom-out"),
       fit: $<HTMLButtonElement>("btn-fit"),
       del: $<HTMLButtonElement>("btn-delete"),
     },
+    pageInput: $<HTMLInputElement>("page-input"),
+    pageCount: $("page-count"),
     filePdf: $<HTMLInputElement>("file-pdf"),
     fileJson: $<HTMLInputElement>("file-json"),
   };
@@ -199,6 +211,7 @@ export class App {
     this.doc = new Doc(this.ui.pagesHost);
     this.loadStyles();
     this.loadSide();
+    this.loadPageMode();
     this.bind();
     this.syncInspector();
     this.setHint("Abra um PDF para começar.");
@@ -213,6 +226,21 @@ export class App {
     b.save.addEventListener("click", () => void this.save(false));
     b.merge.addEventListener("click", () => void this.openMerge());
     b.side.addEventListener("click", () => this.toggleSide());
+    b.prev.addEventListener("click", () => this.goToPage(this.doc.page - 1));
+    b.next.addEventListener("click", () => this.goToPage(this.doc.page + 1));
+    b.mode.addEventListener("click", () => this.togglePageMode());
+    const pi = this.ui.pageInput;
+    pi.addEventListener("focus", () => pi.select());
+    pi.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const n = parseInt(pi.value, 10);
+        if (Number.isFinite(n)) this.goToPage(n);
+        pi.blur();
+      } else if (e.key === "Escape") {
+        pi.blur();
+      }
+    });
+    pi.addEventListener("blur", () => this.syncPageNav());
     window.addEventListener("message", (e) => this.onWebMessage(e));
     b.zoomIn.addEventListener("click", () => void this.zoomBy(ZOOM_STEP));
     b.zoomOut.addEventListener("click", () => void this.zoomBy(1 / ZOOM_STEP));
@@ -244,6 +272,13 @@ export class App {
     window.addEventListener("pointermove", (e) => this.onMove(e));
     window.addEventListener("pointerup", (e) => this.onUp(e));
     stage.addEventListener("wheel", (e) => this.onWheel(e), { passive: false });
+    stage.addEventListener("scroll", () => {
+      if (this.scrollRaf) return;
+      this.scrollRaf = requestAnimationFrame(() => {
+        this.scrollRaf = 0;
+        this.trackPage();
+      });
+    });
 
     stage.addEventListener("dragover", (e) => e.preventDefault());
     stage.addEventListener("drop", (e) => {
@@ -362,6 +397,41 @@ export class App {
       save();
     });
     window.addEventListener("resize", () => apply(sheet.offsetHeight));
+  }
+
+  /**
+   * Menus de sugestão de Origem, Destino, Função, Circuito e Status: cada
+   * campo oferece os valores já usados nesse mesmo campo nas linhas e
+   * polilinhas do documento ativo (Status mantém também as opções padrão).
+   * Refeito a cada redesenho, mas só toca no DOM quando algo mudou.
+   */
+  private suggestKey = "";
+
+  private refreshSuggestions(): void {
+    const keys = ["from", "to", "fn", "circuit", "status"] as const;
+    const lists = keys.map((key) => {
+      const seen = new Map<string, string>();
+      const add = (v: string) => {
+        const t = v.trim();
+        if (t && !seen.has(t.toLocaleLowerCase())) seen.set(t.toLocaleLowerCase(), t);
+      };
+      if (key === "status") STATUS_DEFAULTS.forEach(add);
+      for (const m of this.marks) if (hasRelation(m)) add(m[key]);
+      return [...seen.values()].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
+    });
+    const sig = JSON.stringify(lists);
+    if (sig === this.suggestKey) return;
+    this.suggestKey = sig;
+    keys.forEach((key, i) => {
+      const list = document.getElementById(key === "status" ? "status-list" : `list-${key}`);
+      list?.replaceChildren(
+        ...lists[i].map((v) => {
+          const o = document.createElement("option");
+          o.value = v;
+          return o;
+        }),
+      );
+    });
   }
 
   /** Paleta rápida: cores de traço ou tons claros de marca-texto. */
@@ -555,6 +625,7 @@ export class App {
     this.activate(d);
     d.opened = true;
     d.pagesEl.hidden = false;
+    d.page = 1;
     this.pdfBytes = new Uint8Array(data.slice(0));
     await this.view.load(data);
     this.pdfName = name;
@@ -726,7 +797,10 @@ export class App {
   private onWheel(e: WheelEvent): void {
     if (!this.view.doc) return;
     // Roda = rolar (nativo). Ctrl+roda ou pinça do touchpad = zoom.
-    if (!e.ctrlKey && !e.metaKey) return;
+    if (!e.ctrlKey && !e.metaKey) {
+      if (this.pageMode === "single") this.wheelFlip(e);
+      return;
+    }
     e.preventDefault();
     const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
     const factor = Math.min(1.5, Math.max(1 / 1.5, Math.pow(ZOOM_STEP, -dy / 100)));
@@ -789,6 +863,7 @@ export class App {
 
     await view.render(scale, () => {
       if (this.doc !== doc) return;
+      this.applyPageMode();
       this.ui.zoomLabel.textContent = `${Math.round(scale * 100)}%`;
       this.redraw();
       if (top) {
@@ -853,6 +928,10 @@ export class App {
     if (!this.view.doc) return;
     if (this.editor && e.target === this.editor.area) return;
     this.commitEditor();
+    // clicar no desenho tira o foco dos campos do painel (senão Enter, atalhos
+    // e a troca de seleção continuariam indo para o campo)
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && this.ui.side.contains(active)) active.blur();
     if (e.button === 0 && !this.space) {
       const now = performance.now();
       const l = this.lastDown;
@@ -1286,6 +1365,20 @@ export class App {
       this.cycleDoc(e.key === "PageDown" ? 1 : -1);
       return;
     }
+    if (!ctrl && !e.altKey && this.doc.opened && !typingNow(e)) {
+      if (e.key === "PageDown" || e.key === "PageUp") {
+        // contínuo: rola uma tela (nativo); página única: troca de página
+        if (this.pageMode === "single") {
+          e.preventDefault();
+          this.goToPage(this.doc.page + (e.key === "PageDown" ? 1 : -1));
+          return;
+        }
+      } else if (e.key === "Home" || e.key === "End") {
+        e.preventDefault();
+        this.goToPage(e.key === "Home" ? 1 : this.view.pageCount());
+        return;
+      }
+    }
     if (ctrl && k === "w") {
       e.preventDefault();
       if (this.doc.opened) void this.closeDoc(this.doc);
@@ -1500,7 +1593,12 @@ export class App {
   }
 
   private select(id: string | null, scroll: boolean): void {
-    if (id !== this.selected) this.commitEditor();
+    if (id !== this.selected) {
+      this.commitEditor();
+      // um campo do painel ainda focado não seria atualizado com a nova seleção
+      const a = document.activeElement;
+      if (a instanceof HTMLElement && this.ui.side.contains(a)) a.blur();
+    }
     this.selected = id;
     this.editSession = false;
     const sel = this.current();
@@ -1509,6 +1607,9 @@ export class App {
     this.redraw();
     if (scroll && id) {
       const mark = this.current();
+      if (mark && this.pageMode === "single" && mark.page !== this.doc.page) {
+        this.goToPage(mark.page);
+      }
       const slot = mark ? this.view.slotAt(mark.page) : undefined;
       slot?.wrap.scrollIntoView({ block: "center", inline: "center" });
     }
@@ -1771,6 +1872,7 @@ export class App {
   }
 
   private renderSheet(): void {
+    this.refreshSuggestions();
     const u = this.ui;
     const counts: Record<Mark["type"], number> = { line: 0, polyline: 0, rect: 0, text: 0, highlight: 0 };
     for (const m of this.marks) counts[m.type]++;
@@ -1868,6 +1970,7 @@ export class App {
     stage.scrollTop = d.scrollTop;
     stage.scrollLeft = d.scrollLeft;
     this.ui.zoomLabel.textContent = d.opened ? `${Math.round(d.view.scale * 100)}%` : "—";
+    this.applyPageMode();
     const sel = this.current();
     if (sel) this.sheetTab = sel.type;
     this.syncChrome();
@@ -1957,6 +2060,138 @@ export class App {
     bar.querySelector(".doc-tab.on")?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
 
+  /* ------------------------------------------------------------ páginas */
+
+  private loadPageMode(): void {
+    try {
+      if (localStorage.getItem("liminalpdf.pageMode") === "single") this.pageMode = "single";
+    } catch {
+      /* sem armazenamento */
+    }
+    this.syncModeButton();
+  }
+
+  private togglePageMode(): void {
+    const page = this.doc.page;
+    this.pageMode = this.pageMode === "single" ? "continuous" : "single";
+    try {
+      localStorage.setItem("liminalpdf.pageMode", this.pageMode);
+    } catch {
+      /* ignora */
+    }
+    this.syncModeButton();
+    this.applyPageMode();
+    this.goToPage(page);
+    this.setHint(
+      this.pageMode === "single"
+        ? "Página única: a roda passa de página nas bordas; PgUp/PgDn trocam de página."
+        : "Navegação contínua.",
+    );
+  }
+
+  private syncModeButton(): void {
+    const single = this.pageMode === "single";
+    const b = this.ui.buttons.mode;
+    $("ic-continuous").toggleAttribute("hidden", single);
+    $("ic-single").toggleAttribute("hidden", !single);
+    $("mode-label").textContent = single ? "Página única" : "Contínuo";
+    b.title = single
+      ? "Página única · clique para navegação contínua"
+      : "Navegação contínua · clique para página única";
+    b.classList.toggle("on", single);
+  }
+
+  /** Aplica o modo ao documento ativo (chamado também após cada renderização). */
+  private applyPageMode(): void {
+    const d = this.doc;
+    const single = this.pageMode === "single";
+    d.pagesEl.classList.toggle("single", single);
+    for (const slot of d.view.slots) slot.wrap.classList.toggle("current", slot.pageNum === d.page);
+    this.syncPageNav();
+  }
+
+  private syncPageNav(): void {
+    const d = this.doc;
+    const n = d.opened ? d.view.pageCount() : 0;
+    const u = this.ui;
+    if (document.activeElement !== u.pageInput) u.pageInput.value = n ? String(d.page) : "";
+    u.pageCount.textContent = n ? `/ ${n}` : "/ —";
+    u.pageInput.disabled = !n;
+    u.buttons.prev.disabled = !n || d.page <= 1;
+    u.buttons.next.disabled = !n || d.page >= n;
+    u.buttons.mode.disabled = !n;
+  }
+
+  /** Vai para a página `n`; `atEnd` posiciona no fim dela (voltando com a roda). */
+  private goToPage(n: number, atEnd = false): void {
+    const d = this.doc;
+    const count = d.view.pageCount();
+    if (!d.opened || !count) return;
+    const page = Math.min(count, Math.max(1, Math.round(n)));
+    d.page = page;
+    this.commitEditor();
+    const stage = this.ui.stage;
+    if (this.pageMode === "single") {
+      this.applyPageMode();
+      stage.scrollTop = atEnd ? stage.scrollHeight : 0;
+    } else {
+      const slot = d.view.slotAt(page);
+      if (slot) {
+        const top = slot.wrap.getBoundingClientRect().top - stage.getBoundingClientRect().top;
+        stage.scrollTop += top - 12;
+      }
+      this.syncPageNav();
+    }
+  }
+
+  /** Contínuo: a página atual é a que ocupa o centro da área visível. */
+  private trackPage(): void {
+    if (this.pageMode !== "continuous" || !this.doc.opened) return;
+    const r = this.ui.stage.getBoundingClientRect();
+    const mid = r.top + r.height / 2;
+    let best = this.doc.page;
+    let bestD = Infinity;
+    for (const slot of this.view.slots) {
+      const b = slot.wrap.getBoundingClientRect();
+      const dist = mid < b.top ? b.top - mid : mid > b.bottom ? mid - b.bottom : 0;
+      if (dist < bestD) {
+        bestD = dist;
+        best = slot.pageNum;
+      }
+      if (dist === 0) break;
+    }
+    if (best !== this.doc.page) {
+      this.doc.page = best;
+      this.syncPageNav();
+    }
+  }
+
+  /**
+   * Página única: rolar além da borda (de baixo ou de cima) troca de página,
+   * como no PDF-XChange. Um pequeno acúmulo evita trocas acidentais no touchpad.
+   */
+  private wheelFlip(e: WheelEvent): void {
+    const stage = this.ui.stage;
+    const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+    const atBottom = stage.scrollTop + stage.clientHeight >= stage.scrollHeight - 2;
+    const atTop = stage.scrollTop <= 1;
+    const down = dy > 0;
+    if ((down && !atBottom) || (!down && !atTop) || dy === 0) {
+      this.flipAccum = 0;
+      return;
+    }
+    e.preventDefault();
+    const now = performance.now();
+    if (now - this.flipAt < 350) return;
+    this.flipAccum += dy;
+    if (Math.abs(this.flipAccum) < 100) return;
+    this.flipAccum = 0;
+    const target = this.doc.page + (down ? 1 : -1);
+    if (target < 1 || target > this.view.pageCount()) return;
+    this.flipAt = now;
+    this.goToPage(target, !down);
+  }
+
   /* ------------------------------------------------------------ painel lateral */
 
   private loadSide(): void {
@@ -2012,6 +2247,15 @@ function colorCell(m: Mark): HTMLTableCellElement {
 function hexAlpha(hex: string, a: number): string {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+/** O evento veio de um campo de texto (onde teclas como Home são do campo)? */
+function typingNow(e: KeyboardEvent): boolean {
+  const t = e.target;
+  return (
+    t instanceof HTMLTextAreaElement ||
+    (t instanceof HTMLInputElement && !["range", "color", "button", "checkbox"].includes(t.type))
+  );
 }
 
 function errText(err: unknown): string {
